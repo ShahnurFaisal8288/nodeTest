@@ -1,14 +1,15 @@
+# package.json
 1. run the command npm init -y for package.json
 
-2.npm install express for node
+# express
+2. npm install express for node
 
-3.install the package nodemon and dotenv package
+# nodemon and dot env
+3. install the package nodemon and dotenv package
 
-4.in .env :
-# General Config
+# .env(environment)
+4. in .env :
 APP_PORT=3000
-
-# Database Config
 DB_USERNAME=postgres
 DB_PASSWORD=1234
 DB_NAME=learn_node
@@ -17,12 +18,12 @@ DB_NAME_PROD=database_production
 DB_HOST=127.0.0.1
 DB_DIALECT=postgres
 
-
-#jwt info
+# jwt info in dotenv
 JWT_SECRET_KEY=very-very-long-secret-key
 JWT_EXPIRES_IN=90d
 
-5.create app.js in project and add 
+# root file app.js
+5. create app.js in project and add
 
 require('dotenv').config({ path: `${process.cwd()}/.env` });
 
@@ -33,48 +34,42 @@ const authRoute = require('./route/authRoute');
 //all routes from here
 app.use('/api/auth',authRoute);
 
-
-app.use('*', (req ,res ,next) => {
-    res.status(404).json({
-        status: 'fail',
-        message: 'Route not found',
-    })
+app.use('\*', (req ,res ,next) => {
+res.status(404).json({
+status: 'fail',
+message: 'Route not found',
+})
 })
 
 const PORT = process.env.APP_PORT || 8000;
 
 app.listen(PORT, () => {
-    console.log('server up and running',PORT);
+console.log('server up and running',PORT);
 });
 
-
-6.goto the sequizer and run the packages and add a file named as sequelizerc in migration.
-
-// .sequelizerc
-
+# .sequelizer
+6. go to the sequizer and run the packages and add a file named as sequelizerc in migration.
 const path = require('path');
 
 module.exports = {
-  config: path.resolve('config', 'config.js'),
-  'models-path': path.resolve('db', 'models'),
-  'seeders-path': path.resolve('db', 'seeders'),
-  'migrations-path': path.resolve('db', 'migrations'),
+config: path.resolve('config', 'config.js'),
+'models-path': path.resolve('db', 'models'),
+'seeders-path': path.resolve('db', 'seeders'),
+'migrations-path': path.resolve('db', 'migrations'),
 };
 
-7.and run the command -----> npx sequelize-cli init
 
+# .sequelizer command
+7. run the command -----> npx sequelize-cli init
 
+8. add module.exports in newly created config.js.
 
-8.add module.exports in newly created config.js.
+9. db create:npx sequelize-cli db:create
 
+10. create model and migration :npx sequelize-cli model:generate --name user --attributes userType:Enum,firstName:string,lastName:string,email:string,password:string
 
-9.db create:npx sequelize-cli db:create
-
-
-10.create model and migration :npx sequelize-cli model:generate --name user --attributes userType:Enum,firstName:string,lastName:string,email:string,password:string
-
-11. create a database.js in config folder 
-const { Sequelize } = require("sequelize");
+11. create a database.js in config folder
+    const { Sequelize } = require("sequelize");
 
 const env = process.env.NODE_ENV || 'development';
 const config = require("./config");
@@ -83,10 +78,6 @@ const sequelize = new Sequelize(config[env]);
 
 module.exports = sequelize;
 
+12. db migrate ---->db create:npx sequelize-cli db:migrate
 
-12.db migrate ---->db create:npx sequelize-cli db:migrate
-
-
-13. 12.db undo ---->db create:npx sequelize-cli db:migrate:undo or npx sequelize-cli db:migrate:undo all
-
-
+13. db undo ---->db create:npx sequelize-cli db:migrate:undo or npx sequelize-cli db:migrate:undo all
