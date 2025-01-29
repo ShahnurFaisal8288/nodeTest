@@ -3,6 +3,7 @@ const {
   Model,
   Sequelize
 } = require('sequelize');
+const bcrypt = require('bcrypt');
 const sequelize = require('../../config/database');
 module.exports = sequelize.define('users',{
   id: {
@@ -25,6 +26,17 @@ module.exports = sequelize.define('users',{
   },
   password: {
     type: Sequelize.STRING
+  },
+  confirmPassword: {
+    type: Sequelize.VIRTUAL,
+    set(value){
+      if (value === this.password) {
+        const hashPassword = bcrypt.hashSync(value,10);
+        this.setDataValue('password',hashPassword);
+      }else{
+        throw new Error("Password and Confirm password must be the same");
+      }
+    }
   },
   createdAt: {
     allowNull: false,

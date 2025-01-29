@@ -30,7 +30,8 @@ require('dotenv').config({ path: `${process.cwd()}/.env` });
 const express = require('express');
 const app = express();
 const authRoute = require('./route/authRoute');
-
+//this for receive data as json
+app.use(express.json());
 //all routes from here
 app.use('/api/auth',authRoute);
 
