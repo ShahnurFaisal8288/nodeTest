@@ -79,6 +79,6 @@ const sequelize = new Sequelize(config[env]);
 
 module.exports = sequelize;
 
-12. db migrate ---->db create:npx sequelize-cli db:migrate
+12. db migrate ---->npx sequelize-cli db:migrate
 
-13. db undo ---->db create:npx sequelize-cli db:migrate:undo or npx sequelize-cli db:migrate:undo all
+13. db undo ---->npx sequelize-cli db:migrate:undo or npx sequelize-cli db:migrate:undo all

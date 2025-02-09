@@ -15,22 +15,74 @@ module.exports = sequelize.define('users',{
   },
   userType: {
     type: Sequelize.ENUM('0','1','2'),
+    allowNull: false,
+    validate:{
+      notNull: {
+        msg: 'User type is required'
+      },
+      notEmpty: {
+        msg: 'User type cannot be empty'
+      },
+    }
   },
   firstName: {
-    type: Sequelize.STRING
+    type: Sequelize.STRING,
+    allowNull: false,
+    validate:{
+      notNull: {
+        msg: 'First Name is required'
+      },
+      notEmpty: {
+        msg: 'First Name cannot be empty'
+      },
+    }
   },
   lastName: {
-    type: Sequelize.STRING
+    type: Sequelize.STRING,
+    allowNull: false,
+    validate:{
+      notNull: {
+        msg: 'Last Name is required'
+      },
+      notEmpty: {
+        msg: 'Last Name cannot be empty'
+      },
+    }
   },
   email: {
-    type: Sequelize.STRING
+    type: Sequelize.STRING,
+    unique: true,
+    allowNull: false,
+    validate:{
+      notNull: {
+        msg: 'Email is required'
+      },
+      notEmpty: {
+        msg: 'Email cannot be empty'
+      },
+    }
   },
   password: {
-    type: Sequelize.STRING
+    type: Sequelize.STRING,
+    allowNull: false,
+    validate:{
+      notNull: {
+        msg: 'Password is required'
+      },
+      notEmpty: {
+        msg: 'Password cannot be empty'
+      },
+    }
   },
   confirmPassword: {
     type: Sequelize.VIRTUAL,
     set(value){
+      if (this.password.length < 7) {
+        throw new AppError(
+            'Password length must be grater than 7',
+            400
+        );
+    }
       if (value === this.password) {
         const hashPassword = bcrypt.hashSync(value,10);
         this.setDataValue('password',hashPassword);
