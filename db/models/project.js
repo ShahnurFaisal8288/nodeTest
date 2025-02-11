@@ -1,7 +1,8 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../../config/database');
+const user = require('./user');
 
-module.exports = sequelize.define(
+const project = sequelize.define(
     'project',
     {
         id: {
@@ -129,3 +130,5 @@ module.exports = sequelize.define(
     },
     
 );
+
+module.exports = project;
