@@ -110,13 +110,7 @@ const user = sequelize.define('users',{
   modelName: 'users',
 }
 );
-user.hasMany(project,{
-  foreignKey: 'createdBy',
-  as: 'projects'
-})
+user.hasMany(project, { foreignKey: 'createdBy' });
+project.belongsTo(user, { foreignKey: 'createdBy' });
 
-project.belongsTo(user,{
-  foreignKey: 'createdBy',
-  // as: 'user'
-})
 module.exports = user;
