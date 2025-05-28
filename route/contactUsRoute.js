@@ -5,7 +5,7 @@ const router = require('express').Router();
 router
     .route('/contact')
     .post(authentication,createContactUs)
-    .get(authentication,getAllContact)
+    .get(getAllContact)
 
 router
     .route('/contact/:id')
