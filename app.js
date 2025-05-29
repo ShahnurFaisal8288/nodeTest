@@ -4,6 +4,7 @@ const express = require('express');
 const authRoute = require('./route/authRoute');
 const projectRoute = require('./route/projectRoute');
 const contactUsRoute = require('./route/contactUsRoute');
+const polistRoute = require('./route/polistRoute');
 const AppError = require('./utils/appError');
 const globalErrorHandler = require('./controller/errorController');
 
@@ -15,6 +16,7 @@ app.use(express.json());
 app.use('/api/auth', authRoute);
 app.use('/api', projectRoute);
 app.use('/api', contactUsRoute);
+app.use('/api', polistRoute);
 
 // Handle unknown routes
 app.all('*', (req, res, next) => {
@@ -25,7 +27,7 @@ app.all('*', (req, res, next) => {
 // Global error handler (MUST BE LAST)
 app.use(globalErrorHandler);
 
-const PORT = process.env.APP_PORT || 1000;
+const PORT = process.env.APP_PORT || 2000;
 
 app.listen(PORT, () => {
     console.log('Server up and running on port', PORT);
