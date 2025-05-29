@@ -299,6 +299,8 @@ class BMSMDataPooling {
 const bmsmDataPooling = new BMSMDataPooling();
 
 // MAIN FUNCTION - This calls the BMSMDataPooling class
+// Fixed version of your controller with proper parameter handling
+
 const postPo = catchAsync(async (req, res, next) => {
     console.log('=== BMSM Data Pooling API Called ===');
 
@@ -315,28 +317,85 @@ const postPo = catchAsync(async (req, res, next) => {
 
     console.log('Body received:', JSON.stringify(req.body, null, 2));
 
+    // Extract and validate parameters
+    const BranchCode = req.query.BranchCode || req.body.BranchCode;
+    const projectcode = req.query.projectcode || req.body.projectcode;
+    const LastSyncTime = req.query.LastSyncTime || req.body.LastSyncTime;
+    const br_date = req.query.br_date || req.body.br_date;
+    const _url = req.query._url || req.body._url;
+    const designation = req.query.designation || req.body.designation;
+    const PIN = req.query.PIN || req.body.PIN;
+    const project = req.query.project || req.body.project;
+    
+    // Parameter validation
+    const missingParams = [];
+    if (!BranchCode) missingParams.push('BranchCode');
+    if (!projectcode) missingParams.push('projectcode');
+    if (!LastSyncTime) missingParams.push('LastSyncTime');
+    if (!br_date) missingParams.push('br_date');
+    if (!designation) missingParams.push('designation');
+    if (!PIN) missingParams.push('PIN');
+    
+    // Check if we need API calls (not initial sync) and _url is required
+    const isInitialSync = LastSyncTime === "2000-01-01%2012:00:00" || LastSyncTime === "2000-01-01 12:00:00";
+    if (!isInitialSync && !_url) {
+        missingParams.push('_url (required for non-initial sync)');
+    }
+    
+    if (missingParams.length > 0) {
+        return res.status(400).json({
+            status: 'error',
+            message: `Missing required parameters: ${missingParams.join(', ')}`
+        });
+    }
+
+    // Validate date format
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(br_date)) {
+        return res.status(400).json({
+            status: 'error',
+            message: `Invalid br_date format. Expected YYYY-MM-DD, got: ${br_date}`
+        });
+    }
+
+    console.log('✅ Parameter validation passed');
+    console.log('🔍 Key Parameters:');
+    console.log('- BranchCode:', BranchCode);
+    console.log('- br_date:', br_date);
+    console.log('- LastSyncTime:', LastSyncTime);
+    console.log('- Is Initial Sync:', isInitialSync);
+    console.log('- _url provided:', !!_url);
+
     const params = {
-        BranchCode: req.query.BranchCode || req.body.BranchCode,
-        projectcode: req.query.projectcode || req.body.projectcode,
-        LastSyncTime: req.query.LastSyncTime || req.body.LastSyncTime,
+        BranchCode,
+        projectcode,
+        LastSyncTime,
         securitykey: req.query.securitykey || req.body.securitykey,
-        br_date: req.query.br_date || req.body.br_date,
-        _url: req.query._url || req.body._url,
+        br_date,
+        _url,
         currentTimes: req.query.currentTimes || req.body.currentTimes,
-        designation: req.query.designation || req.body.designation,
-        PIN: req.query.PIN || req.body.PIN,
-        AppId: AppId,
+        designation,
+        PIN,
+        AppId,
         EndcurrentTimes: req.query.EndcurrentTimes || req.body.EndcurrentTimes,
-        project: req.query.project || req.body.project,
-        ApiKey: ApiKey,
-        AppVersionName: AppVersionName,
-        AppVersionCode: AppVersionCode,
+        project,
+        ApiKey,
+        AppVersionName,
+        AppVersionCode,
     };
 
     const result = await bmsmDataPooling.BMSM_DataPooling(params);
 
     if (result.success) {
-        res.status(200).json({ status: 'success', data: result.data });
+        res.status(200).json({ 
+            status: 'success', 
+            data: result.data,
+            debug: {
+                isInitialSync,
+                parametersValidated: true,
+                apiCallsExpected: !isInitialSync
+            }
+        });
     } else {
         res.status(500).json({ status: 'error', message: result.error });
     }
