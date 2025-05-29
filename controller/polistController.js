@@ -21,7 +21,7 @@ class BMSMDataPooling {
     // Main Data Pooling Function
     async BMSM_DataPooling(params) {
         const {
-            BranchCode, projectcode, LastSyncTime, securitykey, br_date, 
+            BranchCode, projectcode, LastSyncTime, securitykey= '5d0a4a85-df7a-scapi-bits-93eb-145f6a9902ae', br_date, 
             _url, currentTimes, designation, PIN, AppId, EndcurrentTimes, 
             project, ApiKey, AppVersionName, AppVersionCode
         } = params;
