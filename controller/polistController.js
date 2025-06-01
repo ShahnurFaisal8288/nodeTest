@@ -21,7 +21,7 @@ class BMSMDataPooling {
     // Main Data Pooling Function
     async BMSM_DataPooling(params) {
         const {
-            BranchCode, projectcode, LastSyncTime, securitykey= '5d0a4a85-df7a-scapi-bits-93eb-145f6a9902ae', br_date, 
+            BranchCode, projectcode, LastSyncTime, securitykey, br_date, 
             _url, currentTimes, designation, PIN, AppId, EndcurrentTimes, 
             project, ApiKey, AppVersionName, AppVersionCode
         } = params;
@@ -387,15 +387,7 @@ const postPo = catchAsync(async (req, res, next) => {
     const result = await bmsmDataPooling.BMSM_DataPooling(params);
 
     if (result.success) {
-        res.status(200).json({ 
-            status: 'success', 
-            data: result.data,
-            debug: {
-                isInitialSync,
-                parametersValidated: true,
-                apiCallsExpected: !isInitialSync
-            }
-        });
+        res.status(200).json({ status: 'success', data: result.data });
     } else {
         res.status(500).json({ status: 'error', message: result.error });
     }
