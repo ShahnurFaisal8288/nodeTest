@@ -17,7 +17,6 @@ const getAllPo = catchAsync(async (req, res, next) => {
 
 // BMSM Data Pooling Class
 class BMSMDataPooling {
-    
     // Main Data Pooling Function
     async BMSM_DataPooling(params) {
         const {
@@ -138,6 +137,7 @@ class BMSMDataPooling {
             
             let url = `${baseUrl}VOListModified?BranchCode=${BranchCode}&PIN=${PIN}&ProjectCode=${ProjectCode}&BusinessDate=${BusinessDate}&UpdatedAt=${UpdatedAt}&key=${key}&caller=${caller}&EndDateTime=${EndDateTime}`;
             url = url.replace(/ /g, '%20');
+           
             
             console.log('VOListModified URL:', url);
             
