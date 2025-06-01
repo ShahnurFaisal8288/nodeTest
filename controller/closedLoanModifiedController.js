@@ -1,27 +1,27 @@
 const catchAsync = require("../utils/catchAsync");
 const axios = require('axios');
 
-// VO Controller Class
-class VOController {
+// Closed Loan Controller Class
+class ClosedLoanController {
     
     // Logging functions
-    ChanelLogStart(BranchCode, PIN, url) {
-        console.log(`[${new Date().toISOString()}] LOG START - Branch: ${BranchCode}, PIN: ${PIN}, URL: ${url}`);
+    ChanelLogStart(BranchCode, CONo, url) {
+        console.log(`[${new Date().toISOString()}] LOG START - Branch: ${BranchCode}, CONo: ${CONo}, URL: ${url}`);
     }
 
-    ChanelLogEnd(BranchCode, PIN, url) {
-        console.log(`[${new Date().toISOString()}] LOG END - Branch: ${BranchCode}, PIN: ${PIN}, URL: ${url}`);
+    ChanelLogEnd(BranchCode, CONo, url) {
+        console.log(`[${new Date().toISOString()}] LOG END - Branch: ${BranchCode}, CONo: ${CONo}, URL: ${url}`);
     }
 
-    // API Function - VO List Modified
-    async getVOListModified(BranchCode, PIN, ProjectCode, BusinessDate, UpdatedAt, key, caller, EndDateTime, baseUrl) {
+    // API Function - Closed Loan Modified
+    async getClosedLoanModified(BranchCode, ProjectCode, CONo, UpdatedAt, key, caller, EndDateTime, baseUrl) {
         try {
-            console.log(`=== Calling VOListModified API for PIN: ${PIN} ===`);
+            console.log(`=== Calling ClosedLoanModified API for CONo: ${CONo} ===`);
             
-            let url = `${baseUrl}VOListModified?BranchCode=${BranchCode}&PIN=${PIN}&ProjectCode=${ProjectCode}&BusinessDate=${BusinessDate}&UpdatedAt=${UpdatedAt}&key=${key}&caller=${caller}&EndDateTime=${EndDateTime}`;
+            let url = `${baseUrl}ClosedLoanModified?BranchCode=${BranchCode}&ProjectCode=${ProjectCode}&CONo=${CONo}&UpdatedAt=${UpdatedAt}&key=${key}&caller=${caller}&EndDateTime=${EndDateTime}`;
             url = url.replace(/ /g, '%20');
             
-            console.log('VOListModified URL:', url);
+            console.log('ClosedLoanModified URL:', url);
             
             this.ChanelLogStart(BranchCode, caller, url);
             
@@ -33,30 +33,29 @@ class VOController {
             this.ChanelLogEnd(BranchCode, caller, url);
 
             if (response.data && response.data.data) {
-                console.log(`VOListModified success for PIN ${PIN}`);
+                console.log(`ClosedLoanModified success for CONo ${CONo}`);
                 return response.data.data;
             }
             return null;
 
         } catch (error) {
-            console.error(`Error in getVOListModified for PIN ${PIN}:`, error.message);
+            console.error(`Error in getClosedLoanModified for CONo ${CONo}:`, error.message);
             return null;
         }
     }
 }
 
-// Initialize VO Controller instance
-const voController = new VOController();
+// Initialize Closed Loan Controller instance
+const closedLoanController = new ClosedLoanController();
 
-// Main GET function for VOListModified endpoint
-const getVo = catchAsync(async (req, res, next) => {
-    console.log('=== VOListModified API Called ===');
+// Main GET function for ClosedLoanModified endpoint
+const getClosedLoanModified = catchAsync(async (req, res, next) => {
+    console.log('=== ClosedLoanModified API Called ===');
     
     // Extract parameters from query or body
     const BranchCode = req.query.BranchCode || req.body.BranchCode;
-    const PIN = req.query.PIN || req.body.PIN;
     const ProjectCode = req.query.ProjectCode || req.body.ProjectCode;
-    const BusinessDate = req.query.BusinessDate || req.body.BusinessDate;
+    const CONo = req.query.CONo || req.body.CONo;
     const UpdatedAt = req.query.UpdatedAt || req.body.UpdatedAt;
     const key = req.query.key || req.body.key || '5d0a4a85-df7a-scapi-bits-93eb-145f6a9902ae';
     const caller = req.query.caller || req.body.caller;
@@ -64,15 +63,14 @@ const getVo = catchAsync(async (req, res, next) => {
     const baseUrl = req.query.baseUrl || req.body.baseUrl;
 
     console.log('Parameters received:', {
-        BranchCode, PIN, ProjectCode, BusinessDate, UpdatedAt, key, caller, EndDateTime, baseUrl
+        BranchCode, ProjectCode, CONo, UpdatedAt, key, caller, EndDateTime, baseUrl
     });
 
     // Parameter validation
     const missingParams = [];
     if (!BranchCode) missingParams.push('BranchCode');
-    if (!PIN) missingParams.push('PIN');
     if (!ProjectCode) missingParams.push('ProjectCode');
-    if (!BusinessDate) missingParams.push('BusinessDate');
+    if (!CONo) missingParams.push('CONo');
     if (!UpdatedAt) missingParams.push('UpdatedAt');
     if (!caller) missingParams.push('caller');
     if (!EndDateTime) missingParams.push('EndDateTime');
@@ -88,8 +86,8 @@ const getVo = catchAsync(async (req, res, next) => {
     console.log('✅ Parameter validation passed');
 
     try {
-        const result = await voController.getVOListModified(
-            BranchCode, PIN, ProjectCode, BusinessDate, UpdatedAt, 
+        const result = await closedLoanController.getClosedLoanModified(
+            BranchCode, ProjectCode, CONo, UpdatedAt, 
             key, caller, EndDateTime, baseUrl
         );
 
@@ -106,7 +104,7 @@ const getVo = catchAsync(async (req, res, next) => {
         }
 
     } catch (error) {
-        console.error('Error in getVo controller:', error);
+        console.error('Error in getClosedLoanModified controller:', error);
         return res.status(500).json({
             status: 'error',
             message: 'Internal server error',
@@ -116,5 +114,5 @@ const getVo = catchAsync(async (req, res, next) => {
 });
 
 module.exports = {
-    getVo
+    getClosedLoanModified
 };

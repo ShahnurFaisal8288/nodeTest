@@ -22,6 +22,7 @@ class VOController {
             url = url.replace(/ /g, '%20');
             
             console.log('VOListModified URL:', url);
+            console.log('Request headers:', { 'Accept': 'application/json' });
             
             this.ChanelLogStart(BranchCode, caller, url);
             
@@ -32,14 +33,35 @@ class VOController {
 
             this.ChanelLogEnd(BranchCode, caller, url);
 
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            console.log('Response data structure:', {
+                hasData: !!response.data,
+                dataKeys: response.data ? Object.keys(response.data) : [],
+                dataType: typeof response.data,
+                fullResponse: response.data
+            });
+
             if (response.data && response.data.data) {
                 console.log(`VOListModified success for PIN ${PIN}`);
                 return response.data.data;
+            } else if (response.data) {
+                console.log(`VOListModified returned data but no .data property for PIN ${PIN}`);
+                return response.data; // Return the whole response if no .data property
             }
+            
+            console.log(`VOListModified returned no data for PIN ${PIN}`);
             return null;
 
         } catch (error) {
             console.error(`Error in getVOListModified for PIN ${PIN}:`, error.message);
+            console.error('Error details:', {
+                message: error.message,
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                responseData: error.response?.data,
+                code: error.code
+            });
             return null;
         }
     }
@@ -93,24 +115,33 @@ const getVo = catchAsync(async (req, res, next) => {
             key, caller, EndDateTime, baseUrl
         );
 
-        if (result) {
-            return res.status(200).json({
-                status: 'success',
-                data: result
-            });
-        } else {
-            return res.status(404).json({
-                status: 'error',
-                message: 'No data found or API call failed'
-            });
-        }
+        // Enhanced debugging response
+        return res.status(200).json({
+            status: result ? 'success' : 'no_data',
+            data: result || null,
+            debug: {
+                apiCalled: true,
+                resultReceived: !!result,
+                parameters: {
+                    BranchCode, PIN, ProjectCode, BusinessDate, 
+                    UpdatedAt, key, caller, EndDateTime, baseUrl
+                },
+                constructedUrl: `${baseUrl}VOListModified?BranchCode=${BranchCode}&PIN=${PIN}&ProjectCode=${ProjectCode}&BusinessDate=${BusinessDate}&UpdatedAt=${UpdatedAt}&key=${key}&caller=${caller}&EndDateTime=${EndDateTime}`.replace(/ /g, '%20')
+            }
+        });
 
     } catch (error) {
         console.error('Error in getVo controller:', error);
         return res.status(500).json({
             status: 'error',
             message: 'Internal server error',
-            error: error.message
+            error: error.message,
+            debug: {
+                parameters: {
+                    BranchCode, PIN, ProjectCode, BusinessDate, 
+                    UpdatedAt, key, caller, EndDateTime, baseUrl
+                }
+            }
         });
     }
 });

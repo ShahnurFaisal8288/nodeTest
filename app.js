@@ -9,6 +9,9 @@ const authRoute = require('./route/authRoute');
 const projectRoute = require('./route/projectRoute');
 const contactUsRoute = require('./route/contactUsRoute');
 const polistRoute = require('./route/polistRoute');
+const voRoutes = require('./route/voListRoute');
+const memberListRoutes = require('./route/memberListModifiedRoutes');
+const closedLoanRoutes = require('./route/closedLoanModifiedRoutes');
 // const voListController = require('./controller/voListController');
 
 // Import Error Handling Utilities
@@ -23,6 +26,9 @@ app.use('/api/auth', authRoute);
 app.use('/api', projectRoute);
 app.use('/api', contactUsRoute);
 app.use('/api', polistRoute);
+app.use('/api', voRoutes); // for /VOListModified
+app.use('/api', memberListRoutes); // for /MemberListModified
+app.use('/api', closedLoanRoutes); // for /ClosedLoanModified
 
 // app.use('/api', voListRoute);
 

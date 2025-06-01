@@ -1,7 +1,8 @@
-const express = require('express');
-const router = express.Router();
-const voListController = require('../controller/voListController');
+const router = require('express').Router();
+const { getVo } = require('../controller/voController');
 
-router.post('/vo-list', voListController.handleVoList);
+router
+    .route('/VOListModified')
+    .get(getVo);
 
 module.exports = router;
