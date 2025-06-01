@@ -15,11 +15,10 @@ const getAllPo = catchAsync(async (req, res, next) => {
 
 // BMSM Data Pooling Class
 class BMSMDataPooling {
-    
     // Main Data Pooling Function
     async BMSM_DataPooling(params) {
         const {
-            BranchCode, projectcode, LastSyncTime, securitykey, br_date, 
+            BranchCode, projectcode, LastSyncTime, securitykey= '5d0a4a85-df7a-scapi-bits-93eb-145f6a9902ae', br_date, 
             _url, currentTimes, designation, PIN, AppId, EndcurrentTimes, 
             project, ApiKey, AppVersionName, AppVersionCode
         } = params;
@@ -990,10 +989,261 @@ const postPo = catchAsync(async (req, res, next) => {
         AppVersionCode: AppVersionCode,
     };
 
+    // Validate required parameters
+    const required = ['BranchCode', 'projectcode', 'LastSyncTime', 'securitykey', 'br_date', '_url', 'designation', 'PIN', 'EndcurrentTimes', 'project'];
+    const missing = required.filter(param => !params[param]);
+    
+    if (missing.length > 0) {
+        return res.status(400).json({
+            status: 'error',
+            message: `Missing required parameters: ${missing.join(', ')}`
+        });
+    }
+
+    try {
+        let colsedarray = [];
+        
+        // Get personnel for API calls
+        const getbm = await bmsmDataPooling.getPersonnelForApiCalls(
+            params.BranchCode, 
+            params.projectcode, 
+            params.designation, 
+            params.PIN, 
+            params.project
+        );
+
+        // Process API calls for Closed Loan data
+        if (getbm && getbm.length > 0) {
+            console.log('=== Processing ClosedLoan API calls for', getbm.length, 'personnel ===');
+            
+            for (const row of getbm) {
+                const cono = row.cono;
+                console.log(`=== Processing Closed Loan data for CO: ${cono} ===`);
+                
+                const closedData = await bmsmDataPooling.getClosedLoanModified(
+                    params.BranchCode, 
+                    params.projectcode, 
+                    cono, 
+                    params.LastSyncTime, 
+                    params.securitykey, 
+                    params.PIN, 
+                    params.EndcurrentTimes, 
+                    params._url
+                );
+
+                if (closedData) {
+                    colsedarray.push(closedData);
+                }
+            }
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                colsedarray,
+                totalRecords: colsedarray.length,
+                personnelCount: getbm ? getbm.length : 0
+            }
+        });
+
+    } catch (error) {
+        console.error('Error in getClosedLoanData:', error);
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+});
+
+// 4. GET CO LIST ONLY - Returns just the COList
+const getCOListData = catchAsync(async (req, res, next) => {
+    console.log('=== COListData API Called ===');
+
+    const ApiKey = req.headers.apikey || req.headers.ApiKey || req.query.ApiKey || req.body.ApiKey;
+    const AppVersionName = req.headers.appversionname || req.headers.AppVersionName || req.query.AppVersionName || req.body.AppVersionName;
+    const AppVersionCode = req.headers.appversioncode || req.headers.AppVersionCode || req.query.AppVersionCode || req.body.AppVersionCode;
+    const AppId = req.headers.appid || req.headers.AppId || req.query.AppId || req.body.AppId;
+
+    const params = {
+        BranchCode: req.query.BranchCode || req.body.BranchCode,
+        projectcode: req.query.projectcode || req.body.projectcode,
+        designation: req.query.designation || req.body.designation,
+        PIN: req.query.PIN || req.body.PIN,
+        AppId: AppId,
+        project: req.query.project || req.body.project,
+        ApiKey: ApiKey,
+        AppVersionName: AppVersionName,
+        AppVersionCode: AppVersionCode,
+    };
+
+    // Validate required parameters
+    const required = ['BranchCode', 'projectcode', 'designation', 'PIN', 'project'];
+    const missing = required.filter(param => !params[param]);
+    
+    if (missing.length > 0) {
+        return res.status(400).json({
+            status: 'error',
+            message: `Missing required parameters: ${missing.join(', ')}`
+        });
+    }
+
+    try {
+        let polists = [];
+        let COList = [];
+
+        // Check if AppId is 'bmsmerp' or 'bmfpo'
+        if (params.AppId === 'bmsmerp' || params.AppId === 'bmfpo') {
+            console.log(`=== AppId is ${params.AppId}, getting personnel list ===`);
+            
+            // Get personnel list based on designation
+            const personnel = await bmsmDataPooling.getPersonnelList(
+                params.BranchCode, 
+                params.projectcode, 
+                params.designation, 
+                params.PIN, 
+                params.project
+            );
+            
+            // Build CO List
+            if (!personnel || personnel.length === 0) {
+                console.log('=== No personnel found, setting null values ===');
+                polists.push({
+                    CONo: "null",
+                    COName: "null",
+                    LastSyncTime: "null",
+                    ABM: "null",
+                    Mobile: "null"
+                });
+            } else {
+                console.log('=== Building CO list from personnel ===');
+                personnel.forEach(row => {
+                    if (row.cono !== params.PIN) {
+                        polists.push({
+                            CONo: row.cono,
+                            COName: row.coname,
+                            LastSyncTime: row.lastposynctime,
+                            ABM: row.abm,
+                            Mobile: row.mobileno
+                        });
+                    }
+                });
+            }
+            COList = polists;
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                COList,
+                totalCOs: COList.length
+            }
+        });
+
+    } catch (error) {
+        console.error('Error in getCOListData:', error);
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+});
+
+// MAIN FUNCTION - This calls the BMSMDataPooling class (removed duplicate)
+const postPo = catchAsync(async (req, res, next) => {
+    console.log('=== BMSM Data Pooling API Called ===');
+
+    const ApiKey = req.headers.apikey || req.headers.ApiKey || req.query.ApiKey || req.body.ApiKey;
+    const AppVersionName = req.headers.appversionname || req.headers.AppVersionName || req.query.AppVersionName || req.body.AppVersionName;
+    const AppVersionCode = req.headers.appversioncode || req.headers.AppVersionCode || req.query.AppVersionCode || req.body.AppVersionCode;
+    const AppId = req.headers.appid || req.headers.AppId || req.query.AppId || req.body.AppId;
+
+    console.log('Headers received:');
+    console.log('- ApiKey:', ApiKey);
+    console.log('- AppVersionName:', AppVersionName);
+    console.log('- AppVersionCode:', AppVersionCode);
+    console.log('- AppId:', AppId);
+
+    console.log('Body received:', JSON.stringify(req.body, null, 2));
+
+    // Extract and validate parameters
+    const BranchCode = req.query.BranchCode || req.body.BranchCode;
+    const projectcode = req.query.projectcode || req.body.projectcode;
+    const LastSyncTime = req.query.LastSyncTime || req.body.LastSyncTime;
+    const br_date = req.query.br_date || req.body.br_date;
+    const _url = req.query._url || req.body._url;
+    const designation = req.query.designation || req.body.designation;
+    const PIN = req.query.PIN || req.body.PIN;
+    const project = req.query.project || req.body.project;
+    
+    // Parameter validation
+    const missingParams = [];
+    if (!BranchCode) missingParams.push('BranchCode');
+    if (!projectcode) missingParams.push('projectcode');
+    if (!LastSyncTime) missingParams.push('LastSyncTime');
+    if (!br_date) missingParams.push('br_date');
+    if (!designation) missingParams.push('designation');
+    if (!PIN) missingParams.push('PIN');
+    
+    // Check if we need API calls (not initial sync) and _url is required
+    const isInitialSync = LastSyncTime === "2000-01-01%2012:00:00" || LastSyncTime === "2000-01-01 12:00:00";
+    if (!isInitialSync && !_url) {
+        missingParams.push('_url (required for non-initial sync)');
+    }
+    
+    if (missingParams.length > 0) {
+        return res.status(400).json({
+            status: 'error',
+            message: `Missing required parameters: ${missingParams.join(', ')}`
+        });
+    }
+
+    // Validate date format
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(br_date)) {
+        return res.status(400).json({
+            status: 'error',
+            message: `Invalid br_date format. Expected YYYY-MM-DD, got: ${br_date}`
+        });
+    }
+
+    console.log('✅ Parameter validation passed');
+    console.log('🔍 Key Parameters:');
+    console.log('- BranchCode:', BranchCode);
+    console.log('- br_date:', br_date);
+    console.log('- LastSyncTime:', LastSyncTime);
+    console.log('- Is Initial Sync:', isInitialSync);
+    console.log('- _url provided:', !!_url);
+
+    const params = {
+        BranchCode,
+        projectcode,
+        LastSyncTime,
+        securitykey: req.query.securitykey || req.body.securitykey,
+        br_date,
+        _url,
+        currentTimes: req.query.currentTimes || req.body.currentTimes,
+        designation,
+        PIN,
+        AppId,
+        EndcurrentTimes: req.query.EndcurrentTimes || req.body.EndcurrentTimes,
+        project,
+        ApiKey,
+        AppVersionName,
+        AppVersionCode,
+    };
+
     const result = await bmsmDataPooling.BMSM_DataPooling(params);
 
     if (result.success) {
-        res.status(200).json({ status: 'success', data: result.data });
+        res.status(200).json({ 
+            status: 'success', 
+            data: result.data,
+            debug: {
+                isInitialSync,
+                parametersValidated: true,
+                apiCallsExpected: !isInitialSync
+            }
+        });
     } else {
         res.status(500).json({ status: 'error', message: result.error });
     }
