@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { getVo } = require('../controller/voController');
+const { getVo } = require('../controller/voListModifiedController');
 
 router
     .route('/VOListModified')

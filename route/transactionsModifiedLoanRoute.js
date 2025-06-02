@@ -3,7 +3,7 @@ const {
   getTransactionsModifiedLoan,
 } = require("../controller/transactionsModifiedLoanController");
 
-// Use GET with query parameters
+// Use POST for JSON input
 router.route("/transactionsModifiedLoan").get(getTransactionsModifiedLoan);
 
 module.exports = router;

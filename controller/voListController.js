@@ -1,120 +1,226 @@
-const catchAsync = require("../utils/catchAsync");
 const axios = require('axios');
+const moment = require('moment');
 
-// VO Controller Class
-class VOController {
+const VOListController = {
     
-    // Logging functions
-    ChanelLogStart(BranchCode, PIN, url) {
-        console.log(`[${new Date().toISOString()}] LOG START - Branch: ${BranchCode}, PIN: ${PIN}, URL: ${url}`);
-    }
-
-    ChanelLogEnd(BranchCode, PIN, url) {
-        console.log(`[${new Date().toISOString()}] LOG END - Branch: ${BranchCode}, PIN: ${PIN}, URL: ${url}`);
-    }
-
-    // API Function - VO List Modified
-    async getVOListModified(BranchCode, PIN, ProjectCode, BusinessDate, UpdatedAt, key, caller, EndDateTime, baseUrl) {
+    // Main method to fetch VOList data
+    async getVOList(req, res) {
         try {
-            console.log(`=== Calling VOListModified API for PIN: ${PIN} ===`);
-            
-            let url = `${baseUrl}VOListModified?BranchCode=${BranchCode}&PIN=${PIN}&ProjectCode=${ProjectCode}&BusinessDate=${BusinessDate}&UpdatedAt=${UpdatedAt}&key=${key}&caller=${caller}&EndDateTime=${EndDateTime}`;
-            url = url.replace(/ /g, '%20');
-            
-            console.log('VOListModified URL:', url);
-            
-            this.ChanelLogStart(BranchCode, caller, url);
-            
-            const response = await axios.get(url, {
-                headers: { 'Accept': 'application/json' },
-                timeout: 30000
-            });
+            const {
+                BranchCode,
+                PIN,
+                cono,
+                projectcode,
+                LastSyncTime,
+                securitykey,
+                EndcurrentTimes,
+                baseUrl,
+                AppId,
+                AppVersionCode,
+                AppVersionName
+            } = req.body;
 
-            this.ChanelLogEnd(BranchCode, caller, url);
-
-            if (response.data && response.data.data) {
-                console.log(`VOListModified success for PIN ${PIN}`);
-                return response.data.data;
+            // Validate required parameters
+            if (!BranchCode || !PIN || !cono || !projectcode || !securitykey || !baseUrl) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'Missing required parameters',
+                    required: ['BranchCode', 'PIN', 'cono', 'projectcode', 'securitykey', 'baseUrl'],
+                    received: Object.keys(req.body)
+                });
             }
-            return null;
+
+            const currentTimesVoList = moment().format('YYYY-MM-DD HH:mm:ss');
+            const status = `Branch VOList IN-${cono}`;
+            
+            // Log sync time
+            console.log(`Sync Time: ${status} at ${currentTimesVoList}`);
+
+            // Build URL
+            const apiUrl = `${baseUrl}VOList`;
+            const params = {
+                BranchCode,
+                PIN: cono,
+                ProjectCode: projectcode,
+                UpdatedAt: LastSyncTime || '2000-01-01 12:00:00',
+                key: securitykey,
+                caller: PIN,
+                EndDateTime: EndcurrentTimes
+            };
+
+            // Log channel start
+            console.log(`Channel Log Start: ${BranchCode} - ${PIN} - ${apiUrl}`);
+            console.log('Request params:', params);
+
+            // Make API request
+            const response = await VOListController.makeApiRequest(apiUrl, params);
+            
+            if (!response.success) {
+                return res.status(500).json({
+                    status: 'error',
+                    message: response.message,
+                    debug: response.debug
+                });
+            }
+
+            // Process response
+            const processedData = VOListController.processApiResponse(response.data);
+            
+            return res.json({
+                status: 'success',
+                message: 'VOList data retrieved successfully',
+                data: processedData.data,
+                count: processedData.count,
+                timestamp: currentTimesVoList
+            });
 
         } catch (error) {
-            console.error(`Error in getVOListModified for PIN ${PIN}:`, error.message);
-            return null;
-        }
-    }
-}
-
-// Initialize VO Controller instance
-const voController = new VOController();
-
-// Main GET function for VOListModified endpoint
-const getVo = catchAsync(async (req, res, next) => {
-    console.log('=== VOListModified API Called ===');
-    
-    // Extract parameters from query or body
-    const BranchCode = req.query.BranchCode || req.body.BranchCode;
-    const PIN = req.query.PIN || req.body.PIN;
-    const ProjectCode = req.query.ProjectCode || req.body.ProjectCode;
-    const BusinessDate = req.query.BusinessDate || req.body.BusinessDate;
-    const UpdatedAt = req.query.UpdatedAt || req.body.UpdatedAt;
-    const key = req.query.key || req.body.key || '5d0a4a85-df7a-scapi-bits-93eb-145f6a9902ae';
-    const caller = req.query.caller || req.body.caller;
-    const EndDateTime = req.query.EndDateTime || req.body.EndDateTime;
-    const baseUrl = req.query.baseUrl || req.body.baseUrl;
-
-    console.log('Parameters received:', {
-        BranchCode, PIN, ProjectCode, BusinessDate, UpdatedAt, key, caller, EndDateTime, baseUrl
-    });
-
-    // Parameter validation
-    const missingParams = [];
-    if (!BranchCode) missingParams.push('BranchCode');
-    if (!PIN) missingParams.push('PIN');
-    if (!ProjectCode) missingParams.push('ProjectCode');
-    if (!BusinessDate) missingParams.push('BusinessDate');
-    if (!UpdatedAt) missingParams.push('UpdatedAt');
-    if (!caller) missingParams.push('caller');
-    if (!EndDateTime) missingParams.push('EndDateTime');
-    if (!baseUrl) missingParams.push('baseUrl');
-    
-    if (missingParams.length > 0) {
-        return res.status(400).json({
-            status: 'error',
-            message: `Missing required parameters: ${missingParams.join(', ')}`
-        });
-    }
-
-    console.log('✅ Parameter validation passed');
-
-    try {
-        const result = await voController.getVOListModified(
-            BranchCode, PIN, ProjectCode, BusinessDate, UpdatedAt, 
-            key, caller, EndDateTime, baseUrl
-        );
-
-        if (result) {
-            return res.status(200).json({
-                status: 'success',
-                data: result
-            });
-        } else {
-            return res.status(404).json({
+            console.error('VOList API Error:', error);
+            return res.status(500).json({
                 status: 'error',
-                message: 'No data found or API call failed'
+                message: 'Internal server error',
+                debug: {
+                    error: error.message,
+                    stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+                }
             });
         }
+    },
 
-    } catch (error) {
-        console.error('Error in getVo controller:', error);
-        return res.status(500).json({
-            status: 'error',
-            message: 'Internal server error',
-            error: error.message
-        });
+    // Make API request with proper error handling
+    async makeApiRequest(url, params) {
+        try {
+            const queryString = new URLSearchParams(params).toString();
+            const fullUrl = `${url}?${queryString}`;
+
+            console.log('Making request to:', fullUrl);
+
+            const config = {
+                method: 'GET',
+                url: fullUrl,
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'NodeJS-App/1.0'
+                },
+                timeout: 30000, // 30 seconds
+                validateStatus: function (status) {
+                    return status < 500; // Resolve only if status code is less than 500
+                }
+            };
+
+            const response = await axios(config);
+
+            // Check if response is successful
+            if (response.status !== 200) {
+                return {
+                    success: false,
+                    message: `HTTP Error: ${response.status}`,
+                    debug: {
+                        status: response.status,
+                        statusText: response.statusText,
+                        data: response.data,
+                        url: fullUrl
+                    }
+                };
+            }
+
+            return {
+                success: true,
+                data: response.data
+            };
+
+        } catch (error) {
+            console.error('API Request Error:', error);
+            
+            if (error.code === 'ECONNABORTED') {
+                return {
+                    success: false,
+                    message: 'Request timeout',
+                    debug: { error: 'Connection timeout', url: url }
+                };
+            }
+            
+            if (error.response) {
+                return {
+                    success: false,
+                    message: `API Error: ${error.response.status}`,
+                    debug: {
+                        status: error.response.status,
+                        data: error.response.data,
+                        headers: error.response.headers,
+                        url: url
+                    }
+                };
+            }
+            
+            return {
+                success: false,
+                message: 'Network error',
+                debug: { error: error.message, url: url }
+            };
+        }
+    },
+
+    // Process API response with flexible structure handling
+    processApiResponse(responseData) {
+        const result = {
+            data: [],
+            count: 0
+        };
+
+        if (!responseData) {
+            return result;
+        }
+
+        // Handle standard structure: {data: [], message: ""}
+        if (responseData.data && responseData.message) {
+            if (responseData.message === "No data found" || !responseData.data.length) {
+                return result;
+            }
+            result.data = Array.isArray(responseData.data) ? responseData.data : [responseData.data];
+        }
+        // Handle direct array response
+        else if (Array.isArray(responseData)) {
+            result.data = responseData;
+        }
+        // Handle single object response (like your current case)
+        else if (typeof responseData === 'object' && (responseData.BranchCode || responseData.ProjectCode)) {
+            result.data = [responseData];
+        }
+        // Handle error responses
+        else if (responseData.error || responseData.status === 'error') {
+            throw new Error(responseData.error || responseData.message || 'Unknown API error');
+        }
+        else {
+            // Log unexpected structure for debugging
+            console.warn('Unexpected API response structure:', Object.keys(responseData));
+            result.data = [responseData];
+        }
+
+        result.count = result.data.length;
+        return result;
+    },
+
+    // Test endpoint to validate the API
+    async testVOList(req, res) {
+        const sampleRequest = {
+            BranchCode: "1831",
+            PIN: "00142543",
+            cono: "00142543",
+            projectcode: "015",
+            LastSyncTime: "2000-01-01 12:00:00",
+            securitykey: "your-security-key",
+            EndcurrentTimes: "2024-05-29 18:00:00",
+            baseUrl: "https://bracapitesting.brac.net/node/scapir/",
+            AppId: "your-app-id",
+            AppVersionCode: "1.0.0",
+            AppVersionName: "VOList App"
+        };
+
+        req.body = sampleRequest;
+        return VOListController.getVOList(req, res);
     }
-});
-
-module.exports = {
-    getVo
 };
+
+module.exports = VOListController;
