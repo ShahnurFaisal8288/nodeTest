@@ -3,9 +3,9 @@ const {
   getGoodLoans,
 } = require("../controller/goodLoansController");
 
-// Use POST for JSON input
-router.route("/GoodLoans").get(getGoodLoans);
+// Support both GET and POST requests
+router.route("/GoodLoans")
+  .get(getGoodLoans)
+  .post(getGoodLoans);
 
 module.exports = router;
-
-

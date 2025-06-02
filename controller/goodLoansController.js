@@ -1,3 +1,4 @@
+// ===== UPDATED CONTROLLER =====
 const catchAsync = require("../utils/catchAsync");
 const axios = require('axios');
 
@@ -15,6 +16,7 @@ class goodLoansController {
     month,
     year,
     LastSyncTime,
+    EndDateTime,
     securitykey,
     PIN,
     baseUrl,
@@ -27,10 +29,21 @@ class goodLoansController {
     console.log(`⏳ SyncTime → BranchCode: ${BranchCode}, PIN: ${PIN}, AppId: ${AppId}, Status: ${status}, Time: ${currentTimesVoList}, AppVersion: ${AppVersionCode}-${AppVersionName}`);
 
     // Format LastSyncTime as required: yyyy-MM-dd HH:mm:ss
-    const formattedSyncTime = `${LastSyncTime} 00:00:00`;
+    const formattedSyncTime = LastSyncTime.includes(' ') ? LastSyncTime : `${LastSyncTime} 00:00:00`;
     const encodedSyncTime = encodeURIComponent(formattedSyncTime);
 
-    const url = `${baseUrl}GoodLoans?BranchCode=${BranchCode}&Month=${month}&Year=${year}&UpdatedAt=${encodedSyncTime}&key=${securitykey}&caller=${PIN}&EndDateTime=${encodedSyncTime}`;
+    // Format EndDateTime - use provided EndDateTime or current time
+    let formattedEndDateTime;
+    if (EndDateTime) {
+      formattedEndDateTime = EndDateTime.includes(' ') ? EndDateTime : `${EndDateTime} 23:59:59`;
+    } else {
+      formattedEndDateTime = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    }
+    const encodedEndDateTime = encodeURIComponent(formattedEndDateTime);
+
+    console.log(`📅 Formatted dates - UpdatedAt: ${formattedSyncTime}, EndDateTime: ${formattedEndDateTime}`);
+
+    const url = `${baseUrl}GoodLoans?BranchCode=${BranchCode}&Month=${month}&Year=${year}&UpdatedAt=${encodedSyncTime}&key=${securitykey}&caller=${PIN}&EndDateTime=${encodedEndDateTime}`;
 
     this.ChanelLogStart(BranchCode, PIN, url);
 
@@ -45,11 +58,21 @@ class goodLoansController {
       const jsondecode = response.data;
       let goodLoansArray = [];
 
-      if (jsondecode && jsondecode.data && jsondecode.data.length > 0) {
-        goodLoansArray = jsondecode.data;
-      }
+      console.log(`📊 API Response for PIN ${PIN}:`, JSON.stringify(jsondecode, null, 2));
 
-      return goodLoansArray;
+      // Check if API returned success status
+      if (jsondecode && jsondecode.code === 200) {
+        if (jsondecode.data && jsondecode.data.length > 0) {
+          goodLoansArray = jsondecode.data;
+          console.log(`✅ Found ${goodLoansArray.length} good loans for PIN ${PIN}`);
+        } else {
+          console.log(`ℹ️ No data found for PIN ${PIN}. API Message: ${jsondecode.message || 'No message'}`);
+        }
+        return goodLoansArray;
+      } else {
+        console.log(`❌ API returned error: ${jsondecode.message || 'Unknown error'}`);
+        return null;
+      }
 
     } catch (error) {
       console.error(`❌ Error fetching GoodLoans for PIN ${PIN}:`, error.message);
@@ -65,25 +88,32 @@ class goodLoansController {
 const getGoodLoans = catchAsync(async (req, res, next) => {
   console.log('🌐 API Call: GoodLoans');
 
+  // Support both query parameters (GET) and body parameters (POST)
+  const params = req.method === 'GET' ? req.query : req.body;
   const {
     BranchCode,
     month,
     year,
     LastSyncTime,
+    UpdatedAt, // Alternative field name from your JSON
+    EndDateTime,
     baseUrl,
     securitykey = '5d0a4a85-df7a-scapi-bits-93eb-145f6a9902ae',
     caller,
-  } = req.query;
+  } = params;
 
   const AppId = req.headers['appid'];
   const AppVersionCode = req.headers['appversioncode'];
   const AppVersionName = req.headers['appversionname'];
 
+  // Use UpdatedAt as LastSyncTime if LastSyncTime is not provided
+  const finalLastSyncTime = LastSyncTime || UpdatedAt;
+
   const missing = [];
   if (!BranchCode) missing.push('BranchCode');
   if (!month) missing.push('month');
   if (!year) missing.push('year');
-  if (!LastSyncTime) missing.push('LastSyncTime');
+  if (!finalLastSyncTime) missing.push('LastSyncTime or UpdatedAt');
   if (!caller) missing.push('caller');
   if (!baseUrl) missing.push('baseUrl');
 
@@ -99,7 +129,8 @@ const getGoodLoans = catchAsync(async (req, res, next) => {
     BranchCode,
     month,
     year,
-    LastSyncTime,
+    LastSyncTime: finalLastSyncTime,
+    EndDateTime,
     securitykey,
     PIN: caller,
     baseUrl,
@@ -108,15 +139,27 @@ const getGoodLoans = catchAsync(async (req, res, next) => {
     AppVersionName
   });
 
-  if (result && result.length > 0) {
-    return res.status(200).json({
-      status: 'success',
-      data: result
-    });
+  if (result !== null) {
+    if (result.length > 0) {
+      return res.status(200).json({
+        status: 'success',
+        data: result,
+        count: result.length
+      });
+    } else {
+      // API call was successful but returned no data
+      return res.status(200).json({
+        status: 'success',
+        message: 'No good loans found for the specified criteria',
+        data: [],
+        count: 0
+      });
+    }
   } else {
-    return res.status(404).json({
+    // API call failed
+    return res.status(500).json({
       status: 'error',
-      message: 'No data found or API request failed'
+      message: 'API request failed - please check logs for details'
     });
   }
 });
