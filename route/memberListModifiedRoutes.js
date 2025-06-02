@@ -1,9 +1,8 @@
-const router = require("express").Router();
-const {
-  getTransactionsModifiedLoan,
-} = require("../controller/transactionsModifiedLoanController");
+const router = require('express').Router();
+const { getMemberList } = require('../controller/memberListController');
 
-// Use GET with query parameters
-router.route("/transactionsModifiedLoan").get(getTransactionsModifiedLoan);
+router
+    .route('/MemberListModified')
+    .get(getMemberList);
 
 module.exports = router;
